@@ -20,9 +20,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft =
           details.max_participants - details.participants.length;
+      const isFull = spotsLeft <= 0;
 
-        // Create participants HTML with delete icons instead of bullet points
-        const participantsHTML =
+      // Create participants HTML with delete icons instead of bullet points
+      const participantsHTML =
           details.participants.length > 0
             ? `<div class="participants-section">
               <h5>Participants:</h5>
@@ -37,13 +38,26 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>`
             : `<p><em>No participants yet</em></p>`;
 
+      const waitlistHTML =
+        details.waitlist && details.waitlist.length > 0
+          ? `<div class="participants-section waitlist-section">
+              <h5>Waitlist:</h5>
+              <ul class="participants-list">
+                ${details.waitlist
+                  .map((email) => `<li>${email}</li>`)
+                  .join("")}
+              </ul>
+            </div>`
+          : ``;
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
-          <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <p><strong>Availability:</strong> ${isFull ? "Full" : `${spotsLeft} spots left`}</p>
           <div class="participants-container">
             ${participantsHTML}
+            ${waitlistHTML}
           </div>
         `;
 

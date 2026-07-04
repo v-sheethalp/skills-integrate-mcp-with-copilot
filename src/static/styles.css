@@ -81,6 +81,10 @@ section h3 {
   border-top: 1px dashed #ccc;
 }
 
+.waitlist-section {
+  margin-top: 12px;
+}
+
 .participants-section h5 {
   margin-bottom: 8px;
   color: #1a237e;
