@@ -25,55 +25,64 @@ activities = {
         "description": "Learn strategies and compete in chess tournaments",
         "schedule": "Fridays, 3:30 PM - 5:00 PM",
         "max_participants": 12,
-        "participants": ["michael@mergington.edu", "daniel@mergington.edu"]
+        "participants": ["michael@mergington.edu", "daniel@mergington.edu"],
+        "waitlist": []
     },
     "Programming Class": {
         "description": "Learn programming fundamentals and build software projects",
         "schedule": "Tuesdays and Thursdays, 3:30 PM - 4:30 PM",
         "max_participants": 20,
-        "participants": ["emma@mergington.edu", "sophia@mergington.edu"]
+        "participants": ["emma@mergington.edu", "sophia@mergington.edu"],
+        "waitlist": []
     },
     "Gym Class": {
         "description": "Physical education and sports activities",
         "schedule": "Mondays, Wednesdays, Fridays, 2:00 PM - 3:00 PM",
         "max_participants": 30,
-        "participants": ["john@mergington.edu", "olivia@mergington.edu"]
+        "participants": ["john@mergington.edu", "olivia@mergington.edu"],
+        "waitlist": []
     },
     "Soccer Team": {
         "description": "Join the school soccer team and compete in matches",
         "schedule": "Tuesdays and Thursdays, 4:00 PM - 5:30 PM",
         "max_participants": 22,
-        "participants": ["liam@mergington.edu", "noah@mergington.edu"]
+        "participants": ["liam@mergington.edu", "noah@mergington.edu"],
+        "waitlist": []
     },
     "Basketball Team": {
         "description": "Practice and play basketball with the school team",
         "schedule": "Wednesdays and Fridays, 3:30 PM - 5:00 PM",
         "max_participants": 15,
-        "participants": ["ava@mergington.edu", "mia@mergington.edu"]
+        "participants": ["ava@mergington.edu", "mia@mergington.edu"],
+        "waitlist": []
     },
     "Art Club": {
         "description": "Explore your creativity through painting and drawing",
         "schedule": "Thursdays, 3:30 PM - 5:00 PM",
         "max_participants": 15,
-        "participants": ["amelia@mergington.edu", "harper@mergington.edu"]
+        "participants": ["amelia@mergington.edu", "harper@mergington.edu"],
+        "waitlist": []
     },
     "Drama Club": {
         "description": "Act, direct, and produce plays and performances",
         "schedule": "Mondays and Wednesdays, 4:00 PM - 5:30 PM",
         "max_participants": 20,
-        "participants": ["ella@mergington.edu", "scarlett@mergington.edu"]
+        "participants": ["ella@mergington.edu", "scarlett@mergington.edu"],
+        "waitlist": []
     },
     "Math Club": {
         "description": "Solve challenging problems and participate in math competitions",
         "schedule": "Tuesdays, 3:30 PM - 4:30 PM",
         "max_participants": 10,
-        "participants": ["james@mergington.edu", "benjamin@mergington.edu"]
+        "participants": ["james@mergington.edu", "benjamin@mergington.edu"],
+        "waitlist": []
     },
     "Debate Team": {
         "description": "Develop public speaking and argumentation skills",
         "schedule": "Fridays, 4:00 PM - 5:30 PM",
         "max_participants": 12,
-        "participants": ["charlotte@mergington.edu", "henry@mergington.edu"]
+        "participants": ["charlotte@mergington.edu", "henry@mergington.edu"],
+        "waitlist": []
     }
 }
 
@@ -98,16 +107,33 @@ def signup_for_activity(activity_name: str, email: str):
     # Get the specific activity
     activity = activities[activity_name]
 
-    # Validate student is not already signed up
-    if email in activity["participants"]:
+    # Validate student is not already signed up or waitlisted
+    if email in activity["participants"] or email in activity["waitlist"]:
+        if email in activity["participants"] and email in activity["waitlist"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Student is already signed up or waitlisted"
+            )
+        if email in activity["participants"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Student is already signed up"
+            )
         raise HTTPException(
             status_code=400,
-            detail="Student is already signed up"
+            detail="Student is already waitlisted"
         )
 
-    # Add student
+    # Add student to participants if space is available, otherwise add to waitlist
+    if len(activity["participants"]) >= activity["max_participants"]:
+        activity["waitlist"].append(email)
+        return {
+            "message": f"Added {email} to the waitlist for {activity_name}",
+            "waitlisted": True,
+        }
+
     activity["participants"].append(email)
-    return {"message": f"Signed up {email} for {activity_name}"}
+    return {"message": f"Signed up {email} for {activity_name}", "waitlisted": False}
 
 
 @app.delete("/activities/{activity_name}/unregister")
@@ -120,13 +146,26 @@ def unregister_from_activity(activity_name: str, email: str):
     # Get the specific activity
     activity = activities[activity_name]
 
-    # Validate student is signed up
-    if email not in activity["participants"]:
-        raise HTTPException(
-            status_code=400,
-            detail="Student is not signed up for this activity"
-        )
+# Remove student from participants or waitlist
+    if email in activity["participants"]:
+        activity["participants"].remove(email)
+        response_message = f"Unregistered {email} from {activity_name}."
 
-    # Remove student
-    activity["participants"].remove(email)
-    return {"message": f"Unregistered {email} from {activity_name}"}
+        # Promote the first waitlisted student if one exists
+        if activity["waitlist"]:
+            promoted_student = activity["waitlist"].pop(0)
+            activity["participants"].append(promoted_student)
+            response_message += (
+                f" {promoted_student} has been moved from the waitlist into the activity."
+            )
+
+        return {"message": response_message}
+
+    if email in activity["waitlist"]:
+        activity["waitlist"].remove(email)
+        return {"message": f"Removed {email} from the waitlist for {activity_name}"}
+
+    raise HTTPException(
+        status_code=400,
+        detail="Student is not signed up or waitlisted for this activity"
+    )
